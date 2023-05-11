@@ -1,4 +1,65 @@
 const Blog = require('../models/Blog');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+
+//Create a User
+exports.createUser = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    // Hash the password using bcrypt
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Save the user to your database
+    const user = await User.create({
+      username,
+      email,
+      password
+    });
+
+    // Generate a JWT token for the user
+    const token = jwt.sign({ userId: user._id }, 'your-secret-key');
+
+    // Send the token and user data back in the response
+    res.status(201).json({ token, user });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+//login 
+exports.loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if the user exists in the database
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    // Compare the password provided with the hashed password in the database
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    // Generate a JWT token for the user
+    const token = jwt.sign({ userId: user._id }, 'your-secret-key');
+
+    // Send the token and user data back in the response
+    res.status(200).json({ token, user });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+
 
 // Create a new blog post
 exports.createBlog = async (req, res) => {
